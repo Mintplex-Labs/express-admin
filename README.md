@@ -1,7 +1,13 @@
 
-# Express Admin
+# Express Admin (modified)
 
 [![npm-version]][npm] [![snyk-vulnerabilities]][snyk]
+
+> [!IMPORTANT]
+> This is a fork of the existing `express-admin` npm package - which is what you probably want to use.
+> This modified package is only useful to prevent express-admin from constantly republishing a schema
+> that via deep comparison, has not changed.
+> Original: https://github.com/simov/express-admin
 
 > _MySQL, MariaDB, PostgreSQL, SQLite admin for Node.js_
 
@@ -1292,8 +1298,8 @@ In that case there is no need to set the `root` configuration for the admin insi
   [snyk-vulnerabilities]: https://img.shields.io/snyk/vulnerabilities/npm/express-admin.svg?style=flat-square (Vulnerabilities)
   [screenshot]: https://i.imgur.com/6wFggqg.png (Express Admin)
 
-  [npm]: https://www.npmjs.com/package/express-admin
-  [snyk]: https://snyk.io/test/npm/express-admin
+  [npm]: https://www.npmjs.com/package/@mintplex-labs/express-admin
+  [snyk]: https://snyk.io/test/npm/@mintplex-labs/express-admin
 
   [tests]: https://github.com/simov/express-admin-tests
   [examples]: https://github.com/simov/express-admin-examples

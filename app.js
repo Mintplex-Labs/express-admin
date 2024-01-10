@@ -24,11 +24,13 @@ var routes = require('./lib/app/routes')
 var Xsql = require('xsql')
 var Qb = require('./lib/qb')
 var dcopy = require('deep-copy')
+var dcomp = require('object-deep-compare')
+const cons = require('consolidate')
 
 
 // sets args.db.client
 // updates args.settings
-function initDatabase (args, done) {
+function initDatabase(args, done) {
   try {
     var client = Client(args.config)
   }
@@ -60,22 +62,27 @@ function initDatabase (args, done) {
     (done) => {
       schema.getData(client, (err, data) => {
         if (err) return done(err)
-        // write back the settings
+        // write back the settings if changes are found.
         var updated = settings.refresh(args.settings, data)
-        fs.writeFileSync(args.config.admin.settings, JSON.stringify(updated, null, 2), 'utf8')
+        var comparison = dcomp.CompareProperties(updated, data);
+        if (comparison.differences.length > 0) {
+          fs.writeFileSync(args.config.admin.settings, JSON.stringify(updated, null, 2), 'utf8')
+        } else {
+          console.log('[express-admin] No schema changes found. Will not republish settings.')
+        }
         args.settings = updated
         done()
       })
     }
   ], (err) => {
     if (err) return done(err)
-    args.db = {client}
+    args.db = { client }
     done()
   })
 }
 
 // modifies args
-function initSettings (args) {
+function initSettings(args) {
   // route variables
 
   // upload
@@ -88,7 +95,7 @@ function initSettings (args) {
     var dpath = path.join(__dirname, 'config/lang')
     var files = fs.readdirSync(dpath)
     var langs = {}
-    for (var i=0; i < files.length; i++) {
+    for (var i = 0; i < files.length; i++) {
       var name = files[i].replace(path.extname(files[i]), '')
       langs[name] = require(path.join(dpath, files[i]))
     }
@@ -123,11 +130,11 @@ function initSettings (args) {
   }
   var events = fpath ? require(fpath) : {}
   if (!events.hasOwnProperty('preSave'))
-    events.preSave = (req, res, args, next) => {next()}
+    events.preSave = (req, res, args, next) => { next() }
   if (!events.hasOwnProperty('postSave'))
-    events.postSave = (req, res, args, next) => {next()}
+    events.postSave = (req, res, args, next) => { next() }
   if (!events.hasOwnProperty('preList'))
-    events.preList = (req, res, args, next) => {next()}
+    events.preList = (req, res, args, next) => { next() }
   args.events = events
 
 
@@ -149,7 +156,7 @@ function initSettings (args) {
 
   // themes
   args.themes = args.config.admin.themes === undefined || args.config.admin.themes
-    ? {theme: require(path.join(__dirname, 'config/themes'))}
+    ? { theme: require(path.join(__dirname, 'config/themes')) }
     : null
 
   // languages
@@ -157,9 +164,9 @@ function initSettings (args) {
     if (args.config.admin.languages !== undefined && !args.config.admin.languages) return null
     var langs = []
     for (var key in args.langs) {
-      langs.push({key: key, name: args.langs[key].name})
+      langs.push({ key: key, name: args.langs[key].name })
     }
-    return {language: langs}
+    return { language: langs }
   })()
 
   // footer
@@ -170,7 +177,7 @@ function initSettings (args) {
 
   // static
   args.libs = dcopy(require(path.join(__dirname, 'config/libs')))
-  args.libs.external = {css: [], js: []}
+  args.libs.external = { css: [], js: [] }
   for (var key in args.custom) {
     var assets = args.custom[key].public
     if (!assets) continue
@@ -185,7 +192,7 @@ function initSettings (args) {
   }
 }
 
-function initServer (args) {
+function initServer(args) {
   var r = require('./routes');
 
   // general settings
@@ -195,7 +202,7 @@ function initServer (args) {
     .engine('html', consolidate.hogan)
 
     .use(bodyParser.json())
-    .use(bodyParser.urlencoded({extended: true}))
+    .use(bodyParser.urlencoded({ extended: true }))
     .use(multipart())
 
     .use(cookieParser())
@@ -240,7 +247,7 @@ function initServer (args) {
 
     // i18n
     var lang = req.cookies.lang || args.locale || 'en'
-    res.cookie('lang', lang, {path: '/', maxAge: 900000000})
+    res.cookie('lang', lang, { path: '/', maxAge: 900000000 })
     moment.locale(lang === 'cn' ? 'zh-cn' : lang)
 
     // template vars
@@ -263,19 +270,19 @@ function initServer (args) {
   // init regexes
   var _routes = routes.init(args.settings, args.custom)
 
-  // register custom apps
-  ;(() => {
-    var have = false
-    for (var key in args.custom) {
-      var _app = args.custom[key].app
-      if (_app && _app.path && fs.existsSync(_app.path)) {
-        var view = require(_app.path)
-        app.use(view)
-        have = true
+    // register custom apps
+    ; (() => {
+      var have = false
+      for (var key in args.custom) {
+        var _app = args.custom[key].app
+        if (_app && _app.path && fs.existsSync(_app.path)) {
+          var view = require(_app.path)
+          app.use(view)
+          have = true
+        }
       }
-    }
-    if (have && _routes.custom) app.all(_routes.custom, r.auth.restrict, r.render.admin)
-  })()
+      if (have && _routes.custom) app.all(_routes.custom, r.auth.restrict, r.render.admin)
+    })()
 
   // login/logout
   app.get('/login', r.login.get, r.render.admin)
@@ -299,7 +306,7 @@ function initServer (args) {
   return app
 }
 
-function init (config, done) {
+function init(config, done) {
   if (!config.config) throw new Error('Admin `config` is required!')
   if (!config.settings) config.settings = {}
   if (!config.users) config.users = {}
